@@ -21,8 +21,12 @@ class Event:
 
         self._waiters = []
 
-    def connect(self, fn):
-        self._callbacks.append(fn)
+    def connect(self, fn=None):
+        if fn is not None:
+            self._callbacks.append(fn)
+
+        else:
+            return lambda fn: self._callbacks.append(fn)
 
     def wait(self):
         w = Waiter()
@@ -83,5 +87,5 @@ class ConditionalEvent(Event):
             self._waiters[condition] = [w]
 
         w.wait()
-        
+
         return self._waiter_return

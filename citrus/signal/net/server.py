@@ -1,20 +1,17 @@
-from socket import gethostbyname, gethostname
 import socket
-import ssl
-
 # from .secure_connection import SecureConnection
 from typing import List
 
 from .connection import Connection as SecureConnection, Connection
-from .parallel import Parallel
 from .event import Event
+from .parallel import Parallel
 
 
 class Server:
     BACKLOG = 7
 
-    def __init__(self, port):
-        self.IP = gethostbyname(gethostname())
+    def __init__(self, ip, port):
+        self.IP = ip
         self.Port = port
 
         self.Connected = Event()

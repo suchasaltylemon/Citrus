@@ -1,7 +1,6 @@
+import socket
 from socket import gethostbyname
 from time import sleep as wait
-
-import socket
 
 # from .secure_connection import SecureConnection
 from .connection import Connection as SecureConnection
@@ -31,6 +30,8 @@ class Client:
         self.Connected.fire(self._connection)
 
         self._connection.Disconnected.connect(lambda: self.Disconnected.fire())
-        
+
+        return self._connection
+
     def disconnect(self):
         self._connection.disconnect()

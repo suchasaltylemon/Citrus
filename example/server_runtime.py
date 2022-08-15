@@ -4,4 +4,4 @@ add_path("server/services/")
 add_path("server/components/")
 add_path("shared/components/")
 
-start()
+start("0.0.0.0")

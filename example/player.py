@@ -1,4 +1,5 @@
 from citrus.core.instance import instance, BaseInstance
+
 from example.shared.components.health_component import Health
 from example.shared.components.transform_component import Transform
 

@@ -6,6 +6,8 @@ import os.path
 from citrus.core.component import is_component
 from citrus.internal.component_manager import ComponentManager
 from citrus.internal.runtime_manager import RuntimeManager
+from internal.db_managers import DBManager
+from internal.network_manager import NetworkManager
 
 paths = []
 
@@ -25,7 +27,7 @@ def _import(file):
     return vars(module)
 
 
-def start():
+def start(ip: str, port: int = None):
     assert not RuntimeManager.started, "Cannot start again, game has already started!"
 
     importlib.invalidate_caches()
@@ -61,7 +63,10 @@ def start():
 
             RuntimeManager.register_controller(exported_controller())
 
+    DBManager.start()
+    NetworkManager.update_info(ip, port)
     RuntimeManager.start()
+    NetworkManager.start()
 
 
 def export(cls):

@@ -19,7 +19,7 @@ class BaseInstance:
 
 def instance(props: dict):
     def decorator(cls):
-        assert issubclass(cls, BaseInstance), "Class must extend `BaseInstance`"
+        assert hasattr(cls, "_components"), "Class must extend `BaseInstance`"
 
         name = props.get("name", "$instance")
         InstanceManager.register_instance_class(cls, props)
