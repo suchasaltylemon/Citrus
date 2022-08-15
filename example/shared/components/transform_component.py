@@ -1,6 +1,6 @@
-from lib import export
-from lib.core.component import component
-from lib.lifecycle import onstart
+from citrus import export
+from citrus.core.component import component
+from citrus.lifecycle import onstart
 
 
 @onstart()

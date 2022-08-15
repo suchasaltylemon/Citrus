@@ -1,5 +1,5 @@
-from lib import export
-from lib.core.component import component
+from citrus import export
+from citrus.core.component import component
 
 
 @component()

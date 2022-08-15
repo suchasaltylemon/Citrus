@@ -1,6 +1,6 @@
-from lib import export
-from lib.core.controller import controller
-from lib.lifecycle import onstart
+from citrus import export
+from citrus.core.controller import controller
+from citrus.lifecycle import onstart
 
 
 @onstart()

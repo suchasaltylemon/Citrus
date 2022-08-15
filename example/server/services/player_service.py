@@ -1,9 +1,9 @@
+from citrus import export
+from citrus.core.service import service
+from citrus.lifecycle import onstart
 from example.player import Player
 from example.shared.components.health_component import Health
 from example.shared.components.transform_component import Transform
-from lib import export
-from lib.core.service import service
-from lib.lifecycle import onstart
 
 
 @onstart()
