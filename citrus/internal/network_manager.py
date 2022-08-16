@@ -1,12 +1,17 @@
 from citrus import RuntimeManager
+from citrus.internal.auth_manager import AuthManager
 from citrus.internal.runtime_manager import SERVER_CONTEXT
-from citrus.signal import Server, Client
-from citrus.signal.net.connection import Connection
+from include.signal import Server, Client
+from include.signal.net import Connection
+from include.signal.net.event import Event, ConditionalEvent
 
 DEFAULT_PORT = 7092
 
 
 class NetworkManager:
+    NewConnection = Event()
+    Signalled = ConditionalEvent(lambda _, signal: [signal.path], default="*")
+
     ip = "<ip>"
     port = DEFAULT_PORT
 
@@ -32,14 +37,22 @@ class NetworkManager:
 
             @cls.server.Connected()
             def handle_connection(connection):
+                cls.NewConnection.fire(connection)
+
+                AuthManager.handle_connection(connection)
+
                 @connection.Signalled()
-                def _():
-                    pass  # TODO: Handle player creation + networkable component addition
+                def handle_all(signal):
+                    cls.Signalled.fire(connection, signal)
 
         else:
             cls.client = Client(cls.ip, cls.port)
 
             cls.client_connection = cls.client.connect()
+
+            @cls.client_connection.Signalled()
+            def handle_signal(signal):
+                cls.Signalled.fire(cls.client_connection, signal)
 
         cls.running = True
 

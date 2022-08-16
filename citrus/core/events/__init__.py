@@ -1,3 +1,3 @@
-from signal.net.event import Event
+from include.signal.net.event import Event
 
 PlayerAdded = Event()

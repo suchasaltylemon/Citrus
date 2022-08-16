@@ -1,11 +1,16 @@
+import random
 import secrets
+import string
 from hashlib import sha256
 from uuid import uuid4
 
-from easydb import StandardDBFactory, Modifier, DataType, DB
+from include.easydb import StandardDBFactory, Modifier, DataType, DB
 
 SALT_BYTE_LENGTH = 8
 ENCODING = "utf-8"
+TAG_LENGTH = 6
+
+MAX_TAG_ITERATIONS = 2048
 
 LOGIN_DETAILS = "LoginDetails"
 
@@ -24,6 +29,17 @@ def encrypt(password, salt):
     return sha256(salted.encode(ENCODING))
 
 
+def generate_tag(username):
+    tag = None
+    iterations = 0
+
+    while tag is None and iterations < MAX_TAG_ITERATIONS:
+        tag = f"#{''.join([random.choice(string.digits) for _ in range(TAG_LENGTH)])}" if not LoginDBManager.db.has(
+            LOGIN_DETAILS, {"Username": username, "Tag": tag}) else None
+
+    return tag
+
+
 class LoginDBManager:
     db: DB = None
 
@@ -37,7 +53,8 @@ class LoginDBManager:
                 "Username": [DataType.String, [Modifier.NotNull]],
                 "Email": [DataType.String, [Modifier.Unique, Modifier.Unique]],
                 "Password": [DataType.String, [Modifier.NotNull]],
-                "Salt": [DataType.String, [Modifier.NotNull]]
+                "Salt": [DataType.String, [Modifier.NotNull]],
+                "Tag": [DataType.String, [Modifier.NotNull]]
             })
 
     def start(self):
@@ -71,6 +88,10 @@ class LoginDBManager:
         if not self.account_exists(email):
             account_id = generate_account_id()
             salt = generate_salt()
+            tag = generate_tag(username)
+
+            if tag is None:
+                return False
 
             encrypted_password = encrypt(password, salt)
 
@@ -79,7 +100,8 @@ class LoginDBManager:
                 "AccountId": account_id,
                 "Email": email,
                 "Salt": salt,
-                "Password": encrypted_password
+                "Password": encrypted_password,
+                "Tag": tag
             })
             success = True
 
@@ -116,4 +138,10 @@ class LoginDBManager:
         return success
 
     def get_account_id(self, email):
-        return self.db.get(LOGIN_DETAILS, {"Email": email}, ["AccountId"]).get("AccountId")
+        return self.db.get(LOGIN_DETAILS, {"Email": email}, ["AccountId"]).get("AccountId", None)
+
+    def get_username(self, account_id):
+        return self.db.get(LOGIN_DETAILS, {"AccountId": account_id}, ["Username"]).get("Username", None)
+
+    def get_tag(self, account_id):
+        return self.db.get(LOGIN_DETAILS, {"AccountId": account_id}, ["Tag"]).get("Tag", None)
