@@ -3,11 +3,11 @@ import importlib
 import inspect
 import os.path
 
-from citrus.core.component import is_component
-from citrus.internal.component_manager import ComponentManager
-from citrus.internal.runtime_manager import RuntimeManager
-from internal.db_managers import DBManager
-from internal.network_manager import NetworkManager
+from .core.component import is_component as _is_component
+from .internal.component_manager import ComponentManager as _ComponentManager
+from .internal.db_managers import DBManager as _DBManager
+from .internal.networking.network_manager import NetworkManager as _NetworkManager
+from .internal.runtime_manager import RuntimeManager as _RuntimeManager
 
 paths = []
 
@@ -28,7 +28,7 @@ def _import(file):
 
 
 def start(ip: str, port: int = None):
-    assert not RuntimeManager.started, "Cannot start again, game has already started!"
+    assert not _RuntimeManager.started, "Cannot start again, game has already started!"
 
     importlib.invalidate_caches()
     for path in paths:
@@ -44,9 +44,9 @@ def start(ip: str, port: int = None):
             namespace = _import(file)
 
             exported_component = namespace["export"]
-            assert is_component(exported_component)
+            assert _is_component(exported_component)
 
-            ComponentManager.register_component(exported_component)
+            _ComponentManager.register_component(exported_component)
 
         for file in service_files:
             namespace = _import(file)
@@ -54,19 +54,19 @@ def start(ip: str, port: int = None):
             exported_service = namespace["export"]
             assert hasattr(exported_service, "_instance")
 
-            RuntimeManager.register_service(exported_service())
+            _RuntimeManager.register_service(exported_service())
 
         for file in controller_files:
             namespace = _import(file)
 
             exported_controller = namespace["export"]
 
-            RuntimeManager.register_controller(exported_controller())
+            _RuntimeManager.register_controller(exported_controller())
 
-    DBManager.start()
-    NetworkManager.update_info(ip, port)
-    RuntimeManager.start()
-    NetworkManager.start()
+    _DBManager.start()
+    _NetworkManager.update_info(ip, port)
+    _NetworkManager.start()
+    _RuntimeManager.start()
 
 
 def export(cls):

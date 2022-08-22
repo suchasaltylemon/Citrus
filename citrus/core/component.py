@@ -1,3 +1,5 @@
+from typing import Optional
+
 COMPONENT_NAME = "__component_name"
 
 
@@ -13,7 +15,9 @@ def get_component(instance, comp):
     return target_component
 
 
-def component():
+def component(options: Optional[dict] = None):
+    options = options or {}
+
     def decorator(cls):
         setattr(cls, COMPONENT_NAME, cls.__name__)
 
@@ -23,4 +27,5 @@ def component():
 
 
 class Component:
-    pass
+    def replicate(self):
+        return None

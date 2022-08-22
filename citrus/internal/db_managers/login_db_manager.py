@@ -1,50 +1,24 @@
-import random
-import secrets
-import string
-from hashlib import sha256
+from hashlib import scrypt
 from uuid import uuid4
 
-from include.easydb import StandardDBFactory, Modifier, DataType, DB
+from Crypto.Random import get_random_bytes
+from easydb import StandardDBFactory, Modifier, DataType
+from ...utils import sbytes, bstring
 
-SALT_BYTE_LENGTH = 8
+SALT_BYTE_LENGTH = 16
 ENCODING = "utf-8"
 TAG_LENGTH = 6
 
-MAX_TAG_ITERATIONS = 2048
+MAX_TAG_NUMBER = int(TAG_LENGTH * "9")
 
 LOGIN_DETAILS = "LoginDetails"
 
 
-def generate_salt():
-    return secrets.token_hex(SALT_BYTE_LENGTH)
-
-
-def generate_account_id():
-    return uuid4().hex
-
-
-def encrypt(password, salt):
-    salted = password + salt
-
-    return sha256(salted.encode(ENCODING))
-
-
-def generate_tag(username):
-    tag = None
-    iterations = 0
-
-    while tag is None and iterations < MAX_TAG_ITERATIONS:
-        tag = f"#{''.join([random.choice(string.digits) for _ in range(TAG_LENGTH)])}" if not LoginDBManager.db.has(
-            LOGIN_DETAILS, {"Username": username, "Tag": tag}) else None
-
-    return tag
-
-
+# TODO: Fix DB not storing
 class LoginDBManager:
-    db: DB = None
-
     def __init__(self, path):
         self.path = path
+        self.db = None
 
     def init_tables(self):
         if not self.db.table_exists(LOGIN_DETAILS):
@@ -64,14 +38,18 @@ class LoginDBManager:
 
     def verify_login(self, email, password):
         info = self.db.get(LOGIN_DETAILS, {"Email": email}, ["Salt", "Password"])
+        info = info[0] if len(info) > 0 else None
 
-        correct_password = info.get("Password", None)
-        salt = info.get("Salt", None)
+        if info is None:
+            return
+
+        correct_password = sbytes(info.get("Password", None))
+        salt = sbytes(info.get("Salt", None))
 
         correct = False
 
         if salt is not None:
-            encrypted_password = encrypt(password, salt)
+            encrypted_password = scrypt(password.encode(), salt=salt)
             correct = encrypted_password == correct_password
 
         return correct
@@ -87,22 +65,24 @@ class LoginDBManager:
 
         if not self.account_exists(email):
             account_id = generate_account_id()
-            salt = generate_salt()
-            tag = generate_tag(username)
+            salt = get_random_bytes(SALT_BYTE_LENGTH)
+            tag = generate_tag(self, username)
 
             if tag is None:
                 return False
 
-            encrypted_password = encrypt(password, salt)
+            encrypted_password = scrypt(password.encode(), salt=salt)
 
             self.db.set(LOGIN_DETAILS, data={
                 "Username": username,
                 "AccountId": account_id,
                 "Email": email,
-                "Salt": salt,
-                "Password": encrypted_password,
+                "Salt": bstring(salt),
+                "Password": bstring(encrypted_password),
                 "Tag": tag
             })
+            self.db.commit()
+            print("fini")
             success = True
 
         return success
@@ -120,10 +100,11 @@ class LoginDBManager:
         success = False
 
         if not self.account_id_exists(account_id):
-            salt = generate_salt()
-            encrypted_password = encrypt(new_password, salt)
+            salt = get_random_bytes(SALT_BYTE_LENGTH)
+            encrypted_password = scrypt(new_password.encode(), salt=salt)
 
-            self.db.set(LOGIN_DETAILS, {"AccountId": account_id}, {"Salt": salt, "Password": encrypted_password})
+            self.db.set(LOGIN_DETAILS, {"AccountId": account_id},
+                        {"Salt": bstring(salt), "Password": bstring(encrypted_password)})
             success = True
 
         return success
@@ -137,11 +118,35 @@ class LoginDBManager:
 
         return success
 
+    def get_account_info(self, account_id):
+        info = self.db.get(LOGIN_DETAILS, {"AccountId": account_id}, ["AccountId", "Email", "Username", "Tag"])
+        info = info[0] if len(info) > 0 else None
+
+        return {
+            "account_id": info.get("AccountId"),
+            "email": info.get("Email"),
+            "username": info.get("username"),
+            "tag": info.get("tag")
+        } if info is not None else None
+
     def get_account_id(self, email):
-        return self.db.get(LOGIN_DETAILS, {"Email": email}, ["AccountId"]).get("AccountId", None)
+        account_ids = self.db.get(LOGIN_DETAILS, {"Email": email}, ["AccountId"])
+        return account_ids[0].get("AccountId", None) if len(account_ids) > 0 else None
 
     def get_username(self, account_id):
-        return self.db.get(LOGIN_DETAILS, {"AccountId": account_id}, ["Username"]).get("Username", None)
+        usernames = self.db.get(LOGIN_DETAILS, {"AccountId": account_id}, ["Username"])
+        return usernames[0].get("Username", None) if len(usernames) > 0 else None
 
     def get_tag(self, account_id):
-        return self.db.get(LOGIN_DETAILS, {"AccountId": account_id}, ["Tag"]).get("Tag", None)
+        tags = self.db.get(LOGIN_DETAILS, {"AccountId": account_id}, ["Tag"])
+        return tags[0].get("Tag", None) if len(tags) > 0 else None
+
+
+def generate_tag(db_manager: LoginDBManager, username):
+    tag = len(db_manager.db.get(LOGIN_DETAILS, {"Username": username}, ["Tag"]))
+
+    return f"#{tag:0{TAG_LENGTH}d}" if tag <= MAX_TAG_NUMBER else None
+
+
+def generate_account_id():
+    return uuid4().hex

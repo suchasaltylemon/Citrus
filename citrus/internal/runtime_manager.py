@@ -13,6 +13,14 @@ class RuntimeManager:
     context = None
 
     @classmethod
+    def is_server(cls):
+        return cls.context == SERVER_CONTEXT
+
+    @classmethod
+    def is_client(cls):
+        return cls.context == CLIENT_CONTEXT
+
+    @classmethod
     def register_service(cls, service_object):
         assert cls.context != CLIENT_CONTEXT, "Runtime is running as client! Cannot register any services!"
 

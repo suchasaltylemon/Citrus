@@ -1,9 +1,9 @@
-from .data_type import DataType
-from .modifier import Modifier
-
-from .db import DB
-from .raw_db import RawDB as _RawDB
 from abc import ABC as _ABC, abstractmethod as _abstractmethod
+
+from .data_type import DataType
+from .db import DB
+from .modifier import Modifier
+from .raw_db import RawDB as _RawDB
 
 
 class _DBFactory(_ABC):

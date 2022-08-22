@@ -1,11 +1,10 @@
-import base64
+from signalio import Event, Signal
 
-from citrus import RuntimeManager, NetworkManager
-from citrus.core.instances.player import Player
-from citrus.internal.components.networkable import Networkable
-from citrus.internal.runtime_manager import SERVER_CONTEXT
-from include.signal import Signal
-from include.signal.net.event import Event
+from .instances.player import Player
+from .systems import PlayerSystem
+from ..internal.components.networkable import Networkable
+from ..internal.networking.network_manager import NetworkManager
+from ..internal.runtime_manager import RuntimeManager
 
 ENDPOINT_PREFIX = "__endpoint/"
 
@@ -19,35 +18,45 @@ class _Endpoint:
 
         @NetworkManager.Signalled(self._path)
         def handle_signal(conn, signal):
-            if NetworkManager.context == SERVER_CONTEXT:
-                # Get player object then fire
+            if RuntimeManager.is_server():
+                players = PlayerSystem().get_players()
 
-                pass
+                player = next((p for p in players if p.get_component(Networkable).get_connection() == conn), None)
+                if player is None:
+                    return
+
+                valid_session_token = player.get_component(Networkable).get_session_token()
+                provided_session_token = signal.data.get("session_token", None)
+
+                if provided_session_token != valid_session_token:
+                    return
+
+                data = signal.data.get("data", None)
+                if data is None:
+                    return
+
+                self.Signalled.fire(player, data)
 
             else:
                 self.Signalled.fire(signal.data)
 
-    @staticmethod
-    def _serialise(data: dict):
-        return {k: base64.b64encode(v) for k, v in data.items()}
 
-    @staticmethod
-    def _deserialise(serialised: dict):
-        return {k: base64.b64decode(v) for k, v in serialised.items()}
-
-
-if RuntimeManager.context == SERVER_CONTEXT:
+if RuntimeManager.is_server():
     class Endpoint(_Endpoint):
         def send_to_player(self, player: Player, data: dict):
-            serialised = self._serialise(data)
-
             player_connection = player.get_component(Networkable).get_connection()
 
-            NetworkManager.send(player_connection, Signal(self._path, serialised))
+            NetworkManager.send(player_connection, Signal(self._path, data))
 
 else:
     class Endpoint(_Endpoint):
         def send_to_server(self, data: dict):
-            serialised = self._serialise(data)
+            networkable = PlayerSystem().local_player.get_component(Networkable)
+            session_token = networkable.get_session_token()
 
-            NetworkManager.send(NetworkManager.client_connection, Signal(self._path, serialised))
+            client_data = {
+                "data": data,
+                "session_token": session_token
+            }
+
+            NetworkManager.send(NetworkManager.client_connection, Signal(self._path, client_data))

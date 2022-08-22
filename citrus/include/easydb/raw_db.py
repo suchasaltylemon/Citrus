@@ -1,10 +1,10 @@
 from base64 import b64encode, b64decode
-from sqlite3 import connect
 from typing import Union, List
 from uuid import uuid4
 
-from .modifier import Modifier
 from .data_type import DataType
+from .modifier import Modifier
+from .queue_db import QueueDB
 
 STRING_ENCODING = "utf-8"
 
@@ -21,8 +21,8 @@ class RawDB:
     def __init__(self, path: str):
         self.path = path
 
-        self._connection = connect(path)
-        self._cursor = self._connection.cursor()
+        self._queue_db = QueueDB(path)
+        self._queue_db.start()
 
     def __enter__(self):
         return self
@@ -32,8 +32,7 @@ class RawDB:
         self.close_connection()
 
     def _fetch(self, query: str):
-        self._cursor.execute(query)
-        return self._cursor.fetchall()
+        return self._queue_db.fetch(query)
 
     def _get_column_names(self, table_name: str):
         return [info[1] for info in self._fetch(f"PRAGMA table_info('{table_name}')")]
@@ -46,7 +45,7 @@ class RawDB:
         modifier_string = " ".join([modifier.value for modifier in modifiers])
         default_value = default_value if type(default_value) != str else f"'{default_value}'"
 
-        self._cursor.execute(
+        self._queue_db.execute(
             f"ALTER TABLE '{table_name}' ADD COLUMN {column_name} {data_type.value} {modifier_string}" + (
                 f" DEFAULT {default_value}" if default_value is not None else ""))
 
@@ -57,7 +56,7 @@ class RawDB:
     def rename_table(self, current_table_name: str, new_table_name):
         assert self.table_exists(current_table_name), "Table does not exist"
 
-        self._cursor.execute(f"ALTER TABLE {current_table_name} RENAME TO {new_table_name}")
+        self._queue_db.execute(f"ALTER TABLE {current_table_name} RENAME TO {new_table_name}")
 
     def create_table(self, table_name: str, shape: dict):
         assert self.table_exists(table_name) is False, "Table already exists"
@@ -73,12 +72,12 @@ class RawDB:
 
             headers.append(f"{column_name} {data_type_name} {' '.join(modifier_names)}")
 
-        self._cursor.execute(f"CREATE TABLE {table_name} ({', '.join(headers)})")
+        self._queue_db.execute(f"CREATE TABLE {table_name} ({', '.join(headers)})")
 
     def delete_table(self, table_name: str):
         assert self.table_exists(table_name), "Table does not exist"
 
-        self._cursor.execute(f"DROP TABLE '{table_name}'")
+        self._queue_db.execute(f"DROP TABLE '{table_name}'")
 
     def set(self, table_name: str, conditions: dict = None, data: dict = None):
         assert self.table_exists(table_name), "Table does not exist"
@@ -90,14 +89,14 @@ class RawDB:
             condition_string = " AND ".join(
                 f"{k}=" + (f"'{v}'" if type(v) == str else str(v)) for k, v in conditions.items())
 
-            self._cursor.execute(f"UPDATE {table_name}  SET {set_string} WHERE {condition_string}")
+            self._queue_db.execute(f"UPDATE {table_name}  SET {set_string} WHERE {condition_string}")
 
         else:
             keys_string = ", ".join(data.keys())
             values_string = ", ".join(
                 [f"'{value}'" if type(value) == str else str(value) for value in data.values()])
 
-            self._cursor.execute(f"INSERT INTO {table_name} ({keys_string}) VALUES ({values_string})")
+            self._queue_db.execute(f"INSERT INTO {table_name} ({keys_string}) VALUES ({values_string})")
 
     def get(self, table_name: str, conditions: dict, columns: Union[List[str], str] = None):
         assert self.table_exists(table_name), "Table does not exist"
@@ -127,7 +126,7 @@ class RawDB:
         condition_string = " AND ".join(
             [f"{k}=" + f"'{v}'" if type(v) == str else str(v) for k, v in conditions.items()])
 
-        self._cursor.execute(f"DELETE FROM {table_name} WHERE {condition_string}")
+        self._queue_db.execute(f"DELETE FROM {table_name} WHERE {condition_string}")
 
     def has(self, table_name: str, conditions: dict):
         assert len(conditions) > 0, "Must have some conditions"
@@ -151,14 +150,14 @@ class RawDB:
                                 column not in deleted_columns and column not in altered_columns]
             column_string = ", ".join(selected_columns)
 
-            self._cursor.execute(f"CREATE TABLE '{temp_table_name}' AS SELECT {column_string} FROM {table_name}")
+            self._queue_db.execute(f"CREATE TABLE '{temp_table_name}' AS SELECT {column_string} FROM {table_name}")
             for column_name, (data_type, modifiers, default_value) in altered_columns.items():
                 self._add_column(temp_table_name, column_name, data_type, modifiers, default_value)
 
             self.commit()
 
             self.delete_table(table_name)
-            self._cursor.execute(f"CREATE TABLE '{table_name}' AS SELECT * FROM '{temp_table_name}'")
+            self._queue_db.execute(f"CREATE TABLE '{table_name}' AS SELECT * FROM '{temp_table_name}'")
             self.commit()
             self.delete_table(temp_table_name)
 
@@ -199,7 +198,8 @@ class RawDB:
         self.alter(table_name, encoded_shape)
 
     def commit(self):
-        self._connection.commit()
+        self._queue_db.commit()
 
     def close_connection(self):
-        self._connection.close()
+        self._queue_db.close_connection()
+        self._queue_db.join()

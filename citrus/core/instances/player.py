@@ -1,27 +1,22 @@
-from citrus import RuntimeManager
-from core.instance import instance, BaseInstance
-from internal.components.networkable import Networkable
-from internal.runtime_manager import SERVER_CONTEXT
+from ..instance import instance, BaseInstance
+from ...internal.components.networkable import Networkable
+from ...internal.runtime_manager import RuntimeManager
 
 
 @instance({
     "name": "Player",
-    "components": []
+    "components": [Networkable]
 })
-class _ReplicatedPlayer(BaseInstance):
-    pass
+class _Player(BaseInstance):
+    username: str = None
+    display_name: str = None
+    account_id: str = None
 
 
-if RuntimeManager.context == SERVER_CONTEXT:
-    @instance({
-        "name": "Player",
-        "components": [
-            Networkable
-        ]
-    })
-    class Player(_ReplicatedPlayer):
+if RuntimeManager.is_server():
+    class Player(_Player):
         pass
 
 else:
-    class Player(_ReplicatedPlayer):
+    class Player(_Player):
         pass

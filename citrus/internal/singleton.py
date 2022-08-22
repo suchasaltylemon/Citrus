@@ -14,3 +14,4 @@ def singleton(cls, cb=None):
         return cls._instance
 
     setattr(cls, "__new__", new)
+    return cls

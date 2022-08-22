@@ -1,4 +1,5 @@
-from internal.db_managers.login_db_manager import LoginDBManager
+from .login_db_manager import LoginDBManager
+from ..runtime_manager import RuntimeManager
 
 
 class DBManager:
@@ -6,6 +7,8 @@ class DBManager:
 
     @classmethod
     def start(cls):
-        cls.login_db_manager = LoginDBManager("./db/accounts.db")
+        if not RuntimeManager.is_server():
+            return
 
+        cls.login_db_manager = LoginDBManager("./db/accounts.db")
         cls.login_db_manager.start()

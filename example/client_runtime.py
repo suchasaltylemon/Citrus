@@ -4,4 +4,4 @@ add_path("client/components")
 add_path("client/controllers")
 add_path("shared/components")
 
-start("0.0.0.0")
+start("127.0.0.1")
