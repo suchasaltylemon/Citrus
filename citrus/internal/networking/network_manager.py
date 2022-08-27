@@ -36,14 +36,14 @@ class NetworkManager:
 
             @cls.server.Connected()
             def handle_connection(connection: SecureConnection):
+                @connection.Signalled()
+                def handle_all(signal):
+                    cls.Signalled.fire(connection, signal)
+
                 if not connection.secure:
                     connection.Secured.wait()
 
                 cls.NewConnection.fire(connection)
-
-                @connection.Signalled()
-                def handle_all(signal):
-                    cls.Signalled.fire(connection, signal)
 
         else:
             cls.client = SecureClient(cls.ip, cls.port)

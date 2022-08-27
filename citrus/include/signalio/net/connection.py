@@ -52,7 +52,11 @@ class Connection:
             stream = b""
 
             while Connection.TERMINATOR not in stream:
-                stream += self._socket.recv(Connection.CHUNK_SIZE)
+                try:
+                    stream += self._socket.recv(Connection.CHUNK_SIZE)
+
+                except (ConnectionResetError, ConnectionError, ConnectionAbortedError, ConnectionRefusedError):
+                    self._close()
 
             signal = Signal.decode(stream.split(Connection.TERMINATOR)[0])
 
@@ -62,6 +66,7 @@ class Connection:
             else:
                 transformed_signal = self._signal_transformer(signal)
                 self.Signalled.fire(transformed_signal)
+                print()
 
     @staticmethod
     def _encode_data(data: dict):

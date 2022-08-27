@@ -1,8 +1,8 @@
 import typing
 from uuid import uuid4
 
-from citrus.core.component import get_component
-from citrus.internal.instance_manager import InstanceManager
+from .component import get_component
+from ..internal.instance_manager import InstanceManager
 
 T = typing.TypeVar("T")
 

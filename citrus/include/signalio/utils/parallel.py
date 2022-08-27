@@ -12,8 +12,11 @@ class Parallel(Thread):
         try:
             self._callback()
 
-        finally:
-            return
+        except Exception as e:
+            raise e
+
+        # finally:
+        #     return
 
     def get_id(self):
         if hasattr(self, "_thread_id"):

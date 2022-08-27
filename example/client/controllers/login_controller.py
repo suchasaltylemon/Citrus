@@ -1,5 +1,5 @@
 from citrus import export
-from citrus.core import login, signup
+from citrus.core.auth import login, signup
 from citrus.core.controller import controller
 from citrus.lifecycle import onstart
 
@@ -14,8 +14,8 @@ class LoginController:
         password = input("Password: ").strip()
 
         if should_login:
-            info = login(email, password)
-            print(info)
+            player = login(email, password)
+            print(player.display_name)
 
         else:
             username = input("Username: ").strip()

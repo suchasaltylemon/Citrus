@@ -1,17 +1,26 @@
-from hashlib import scrypt
 from uuid import uuid4
 
+from Crypto.Protocol.KDF import scrypt
 from Crypto.Random import get_random_bytes
 from easydb import StandardDBFactory, Modifier, DataType
-from ...utils import sbytes, bstring
+from ...utils.encoding import bstring, sbytes
+
+KEY_LENGTH = 16
+MEMORY_COST = 2 ** 14
+BLOCK_SIZE = 8
+PARALLELISATION = 2
 
 SALT_BYTE_LENGTH = 16
 ENCODING = "utf-8"
-TAG_LENGTH = 6
 
+TAG_LENGTH = 6
 MAX_TAG_NUMBER = int(TAG_LENGTH * "9")
 
 LOGIN_DETAILS = "LoginDetails"
+
+
+def encrypt(password: bytes, salt: bytes):
+    return scrypt(password, salt, KEY_LENGTH, MEMORY_COST, BLOCK_SIZE, PARALLELISATION)
 
 
 # TODO: Fix DB not storing
@@ -49,7 +58,7 @@ class LoginDBManager:
         correct = False
 
         if salt is not None:
-            encrypted_password = scrypt(password.encode(), salt=salt)
+            encrypted_password = encrypt(password.encode(), salt)
             correct = encrypted_password == correct_password
 
         return correct
@@ -71,7 +80,7 @@ class LoginDBManager:
             if tag is None:
                 return False
 
-            encrypted_password = scrypt(password.encode(), salt=salt)
+            encrypted_password = encrypt(password.encode(), salt)
 
             self.db.set(LOGIN_DETAILS, data={
                 "Username": username,
@@ -82,7 +91,6 @@ class LoginDBManager:
                 "Tag": tag
             })
             self.db.commit()
-            print("fini")
             success = True
 
         return success
@@ -101,7 +109,7 @@ class LoginDBManager:
 
         if not self.account_id_exists(account_id):
             salt = get_random_bytes(SALT_BYTE_LENGTH)
-            encrypted_password = scrypt(new_password.encode(), salt=salt)
+            encrypted_password = encrypt(new_password.encode(), salt)
 
             self.db.set(LOGIN_DETAILS, {"AccountId": account_id},
                         {"Salt": bstring(salt), "Password": bstring(encrypted_password)})
@@ -125,8 +133,8 @@ class LoginDBManager:
         return {
             "account_id": info.get("AccountId"),
             "email": info.get("Email"),
-            "username": info.get("username"),
-            "tag": info.get("tag")
+            "username": info.get("Username"),
+            "tag": info.get("Tag")
         } if info is not None else None
 
     def get_account_id(self, email):

@@ -1,4 +1,4 @@
-from citrus.internal.component_manager import ComponentManager
+from .component_manager import ComponentManager
 
 
 class InstanceManager:
@@ -12,7 +12,8 @@ class InstanceManager:
 
     @classmethod
     def attach_components(cls, instance):
-        components = cls.instance_component_map[instance.__class__]
+        components = [y for x in instance.__class__.mro() if x in cls.instance_component_map for y in
+                      cls.instance_component_map[x]]
 
         for component in components:
             loaded_component = ComponentManager.load_component(component)

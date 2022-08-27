@@ -6,8 +6,10 @@ import os.path
 from .core.component import is_component as _is_component
 from .internal.component_manager import ComponentManager as _ComponentManager
 from .internal.db_managers import DBManager as _DBManager
+from .internal.endpoint_manager import EndpointManager as _EndpointManager
 from .internal.networking.network_manager import NetworkManager as _NetworkManager
 from .internal.runtime_manager import RuntimeManager as _RuntimeManager
+from .internal.system_manager import SystemManager as _SystemManager
 
 paths = []
 
@@ -66,7 +68,9 @@ def start(ip: str, port: int = None):
     _DBManager.start()
     _NetworkManager.update_info(ip, port)
     _NetworkManager.start()
+    _SystemManager.start()
     _RuntimeManager.start()
+    _EndpointManager.start()
 
 
 def export(cls):

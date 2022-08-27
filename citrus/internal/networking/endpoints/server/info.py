@@ -4,6 +4,8 @@ from .....core.instances.player import Player
 
 ServerGetPlayerInfo = Endpoint("GetPlayerInfo")
 
+LOADER = object()
+
 
 @ServerGetPlayerInfo.Signalled()
 def handle_get_info(player: Player, _):

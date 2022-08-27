@@ -5,10 +5,12 @@ from .info import get_player_info
 from ...network_manager import NetworkManager
 from ....components.networkable import Networkable
 from .....core.instances.player import Player
-from .....core.systems import PlayerSystem
-from .....utils import sbytes
+from .....core.systems import get_system
+from .....utils.encoding import sbytes
 
 LoggedIn = Event[Player]()
+
+LOADER = object()
 
 
 @NetworkManager.Signalled("__session_token")
@@ -23,9 +25,9 @@ def handle_session_token(_, signal):
     networkable = player.get_component(Networkable)
     networkable.set_session_token(session_token)
 
-    PlayerSystem()._player = player
+    get_system("players")._local_player = player
 
-    player_info = get_player_info()
+    player_info, = get_player_info()
     player.account_id = player_info.get("account_id", None)
     player.display_name = player_info.get("username") + player_info.get("tag")
     player.username = player_info.get("username")

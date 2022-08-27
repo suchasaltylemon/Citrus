@@ -4,7 +4,6 @@ def singleton(cls, cb=None):
     def new(_):
         if cls._instance is None:
             obj = super(cls, cls).__new__(cls)
-            cls.__init__(obj)
 
             cls._instance = obj
 

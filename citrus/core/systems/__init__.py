@@ -1,5 +1,11 @@
-from .player_system import *
+_loaded_systems = {}
 
 
-def get_system(system: type):
-    return system()
+def init_systems():
+    from .player_system import PlayerSystem
+
+    _loaded_systems["players"] = PlayerSystem()
+
+
+def get_system(system_name: str):
+    return _loaded_systems[system_name]

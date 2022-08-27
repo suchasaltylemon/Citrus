@@ -5,7 +5,7 @@ from ...network_manager import NetworkManager
 from ....components.networkable import Networkable
 from ....db_managers import DBManager
 from .....core.instances.player import Player
-from .....utils import bstring
+from .....utils.encoding import bstring
 
 currently_logged_in = []
 
@@ -14,6 +14,8 @@ LoggedIn = Event[Player]()
 SESSION_TOKEN_SIZE_BYTES = 7
 
 session_tokens = {}
+
+LOADER = object()
 
 
 def send_session_token(conn: SecureConnection, session_token: bytes):
@@ -35,8 +37,6 @@ def player_login(conn: SecureConnection, account_id: str):
     session_token = generate_session_token()
     session_tokens[conn] = session_token
     send_session_token(conn, session_token)
-
-    currently_logged_in.append(account_id)
 
     player = Player()
     player.username = username
