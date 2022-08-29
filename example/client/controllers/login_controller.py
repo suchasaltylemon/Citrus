@@ -3,6 +3,8 @@ from citrus.core.auth import login, signup
 from citrus.core.controller import controller
 from citrus.lifecycle import onstart
 
+print("loaded")
+
 
 @controller()
 @onstart()

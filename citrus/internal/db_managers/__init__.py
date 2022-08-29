@@ -1,5 +1,5 @@
 from .login_db_manager import LoginDBManager
-from ..runtime_manager import RuntimeManager
+from ..lifecycle_manager import LifecycleManager
 
 
 class DBManager:
@@ -7,7 +7,7 @@ class DBManager:
 
     @classmethod
     def start(cls):
-        if not RuntimeManager.is_server():
+        if not LifecycleManager.is_server():
             return
 
         cls.login_db_manager = LoginDBManager("./db/accounts.db")

@@ -1,4 +1,6 @@
-from citrus import add_path, start
+from citrus import add_path, start, log_to_stream
+
+log_to_stream()
 
 add_path("client/components")
 add_path("client/controllers")

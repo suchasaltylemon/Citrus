@@ -66,7 +66,6 @@ class Connection:
             else:
                 transformed_signal = self._signal_transformer(signal)
                 self.Signalled.fire(transformed_signal)
-                print()
 
     @staticmethod
     def _encode_data(data: dict):

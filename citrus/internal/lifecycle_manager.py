@@ -1,10 +1,10 @@
-from citrus.lifecycle import ON_START, ON_START_REGISTERED
+from ..lifecycle import ON_START, ON_START_REGISTERED
 
 SERVER_CONTEXT = "server"
 CLIENT_CONTEXT = "client"
 
 
-class RuntimeManager:
+class LifecycleManager:
     services = []
     controllers = []
 
@@ -24,7 +24,6 @@ class RuntimeManager:
     def register_service(cls, service_object):
         assert cls.context != CLIENT_CONTEXT, "Runtime is running as client! Cannot register any services!"
 
-        cls.context = SERVER_CONTEXT
         cls.services.append(service_object)
 
     @classmethod
@@ -32,7 +31,6 @@ class RuntimeManager:
         assert cls.context != SERVER_CONTEXT, "Runtime is running as server! Cannot register any " \
                                               "controllers! "
 
-        cls.context = CLIENT_CONTEXT
         cls.controllers.append(controller_object)
 
     @classmethod
@@ -54,3 +52,7 @@ class RuntimeManager:
                 getattr(controller, ON_START)()
 
         cls.started = True
+
+    @classmethod
+    def set_context(cls, context):
+        cls.context = context

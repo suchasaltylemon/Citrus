@@ -2,7 +2,7 @@ from signalio import Event, ConditionalEvent
 from signalio import SecureServer, SecureClient, SecureConnection
 from signalio import Signal
 
-from ..runtime_manager import RuntimeManager, SERVER_CONTEXT
+from ..lifecycle_manager import LifecycleManager, SERVER_CONTEXT
 
 DEFAULT_PORT = 7092
 
@@ -28,7 +28,7 @@ class NetworkManager:
 
     @classmethod
     def start(cls):
-        cls.context = RuntimeManager.context
+        cls.context = LifecycleManager.context
 
         if cls.context == SERVER_CONTEXT:
             cls.server = SecureServer(cls.ip, cls.port)
