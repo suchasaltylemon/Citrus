@@ -1,12 +1,14 @@
+import math
+
 from citrus import export
 from citrus.core.auth import login, signup
 from citrus.core.controller import controller
 from citrus.lifecycle import onstart
 
-print("loaded")
 
-
-@controller()
+@controller({
+    "load_order": -math.inf
+})
 @onstart()
 class LoginController:
     def on_start(self):

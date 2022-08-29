@@ -1,3 +1,4 @@
+import inspect
 import time
 from threading import Event as Waiter, Thread
 from typing import TypeVar, Callable, Generic, Optional, Any
@@ -15,14 +16,11 @@ class Event(Generic[T]):
     def __call__(self, fn: Optional[F] = None) -> Callable[[F], F]:
         return self.connect(fn)
 
-    def _start(self):
-        while True:
-            callback, args = self._queue.get()
-            callback(*args)
-
     def fire(self, *args: T):
         for callback in self._callbacks:
-            Thread(target=callback, args=args).start()
+            params = inspect.signature(callback).parameters.keys()
+
+            Thread(target=callback, args=[arg for arg, _ in zip(args, params)]).start()
 
         for w in self._waiters:
             self._waiter_return = args
@@ -93,7 +91,9 @@ class ConditionalEvent(Event, Generic[T]):
 
         for condition, callback in self._callbacks.items():
             if condition in target_condition:
-                Thread(target=callback, args=args).start()
+                params = inspect.signature(callback).parameters.keys()
+
+                Thread(target=callback, args=[arg for arg, _ in zip(args, params)]).start()
 
         for condition, waiter in self._waiters.items():
             if condition in target_condition:

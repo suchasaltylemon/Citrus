@@ -2,7 +2,7 @@ from signalio import Event, Signal
 from .instances.player import Player
 from .systems import get_system
 from ..internal.components.networkable import Networkable
-from ..internal.lifecycle_manager import LifecycleManager
+from ..internal.context_manager import ContextManager
 from ..internal.networking.network_manager import NetworkManager
 from ..utils.encoding import bstring, sbytes
 
@@ -18,7 +18,7 @@ class _Endpoint:
 
         @NetworkManager.Signalled(self._path)
         def handle_signal(conn, signal):
-            if LifecycleManager.is_server():
+            if ContextManager.is_server():
                 players = get_system("players").get_players()
 
                 player = next((p for p in players if p.get_component(Networkable).get_connection() == conn), None)
@@ -41,7 +41,7 @@ class _Endpoint:
                 self.Signalled.fire(signal.data)
 
 
-if LifecycleManager.is_server():
+if ContextManager.is_server():
     class Endpoint(_Endpoint):
         def send_to_player(self, player: Player, data: dict):
             player_connection = player.get_component(Networkable).get_connection()

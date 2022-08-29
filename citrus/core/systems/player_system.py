@@ -2,18 +2,21 @@ from typing import List
 
 from signalio import Event
 from ..instances.player import Player
-from ...internal.lifecycle_manager import LifecycleManager
+from ...internal.context_manager import ContextManager
 from ...internal.networking.endpoints.server.auth import LoggedIn
 from ...internal.singleton import singleton
+from ...log import logger
+
+core_system_logger = logger("core_system")
 
 
-class _PlayerSystem:
+class _PlayerService:
     pass
 
 
-if LifecycleManager.is_server():
+if ContextManager.is_server():
     @singleton
-    class PlayerSystem(_PlayerSystem):
+    class PlayerService(_PlayerService):
         PlayerAdded = Event[Player]()
 
         def __init__(self):
@@ -24,12 +27,14 @@ if LifecycleManager.is_server():
                 self._players.append(player)
                 self.PlayerAdded.fire(player)
 
+                core_system_logger.info("Player has been registered to PlayerService")
+
         def get_players(self) -> List[Player]:
             return self._players
 
 else:
     @singleton
-    class PlayerSystem(_PlayerSystem):
+    class PlayerService(_PlayerService):
         _local_player: Player = None
 
         @property

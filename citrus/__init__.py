@@ -1,19 +1,20 @@
 import glob
 import importlib
 import inspect
-import logging
 import os.path
 from threading import Thread
-from typing import List
+from typing import List, Optional
 
 from .core.component import is_component as _is_component
-from .core.errors import GameRunningError, LoggingException, NoModuleEntrypointException
+from .core.errors import GameRunningError, NoModuleEntrypointException
 from .internal.component_manager import ComponentManager as _ComponentManager
+from .internal.context_manager import ContextManager as _ContextManager
 from .internal.db_managers import DBManager as _DBManager
 from .internal.endpoint_manager import EndpointManager as _EndpointManager
-from .internal.lifecycle_manager import LifecycleManager as _RuntimeManager, SERVER_CONTEXT, CLIENT_CONTEXT
 from .internal.networking.network_manager import NetworkManager as _NetworkManager
+from .internal.registration_manager import RegistrationManager as _RegistrationManager
 from .internal.system_manager import SystemManager as _SystemManager
+from .log import setup as _setup, logger as _logger
 
 paths = []
 
@@ -21,29 +22,14 @@ COMPONENT_EXT = "_component.py"
 SERVICE_EXT = "_service.py"
 CONTROLLER_EXT = "_controller.py"
 
-init_logger = logging.Logger("Init")
+game_started = False
 
-logging_to_stream = False
-log_paths = []
-
-
-def log_to_file(path: str):
-    if path in log_paths:
-        raise LoggingException("Logging is already set to this file")
-
-    init_logger.addHandler(logging.FileHandler(path))
-
-
-def log_to_stream():
-    global logging_to_stream
-    if logging_to_stream:
-        raise LoggingException("Already logging to stream")
-
-    init_logger.addHandler(logging.StreamHandler())
+boot_logger = _logger("boot")
 
 
 def add_path(path: str):
-    init_logger.info(f"Added path '{path}'")
+    path = path.replace("/", "\\")
+    boot_logger.info(f"Added path '{path}'")
     paths.append(path)
 
 
@@ -58,48 +44,52 @@ def _load_modules(component_files, service_files, controller_files):
     threads: List[Thread] = []
     for file in component_files:
         def _thread():
+            boot_logger.info(f"Loading file '{file}'")
             namespace = _import(file)
-            init_logger.info(f"Loaded file '{file}")
+            boot_logger.info(f"Loaded file '{file}")
 
             exported_component = namespace["export"]
             assert _is_component(exported_component)
 
             _ComponentManager.register_component(exported_component)
-            init_logger.info(f"Registered component {exported_component}")
 
         t = Thread(target=_thread)
         t.start()
+        boot_logger.debug(f"Started controller loading thread for {file}")
 
         threads.append(t)
 
     for file in service_files:
         def _thread():
+            boot_logger.info(f"Loading file '{file}'")
             namespace = _import(file)
-            init_logger.info(f"Loaded file '{file}")
+            boot_logger.info(f"Loaded file '{file}")
 
             exported_service = namespace["export"]
             assert hasattr(exported_service, "_instance")
 
-            _RuntimeManager.register_service(exported_service())
-            init_logger.info(f"Registered service {exported_service}")
+            _RegistrationManager.register_service(exported_service())
 
         t = Thread(target=_thread)
         t.start()
+        boot_logger.debug(f"Started service loading thread for {file}")
 
         threads.append(t)
 
     for file in controller_files:
         def _thread():
+            boot_logger.info(f"Loading file '{file}'")
             namespace = _import(file)
-            init_logger.info(f"Loaded file '{file}")
+            boot_logger.info(f"Loaded file '{file}")
 
             exported_controller = namespace["export"]
 
-            _RuntimeManager.register_controller(exported_controller())
-            init_logger.info(f"Registered controller {exported_controller}")
+            _RegistrationManager.register_controller(exported_controller())
+            boot_logger.info(f"Registered controller {exported_controller}")
 
         t = Thread(target=_thread)
         t.start()
+        boot_logger.debug(f"Started controller loading thread for {file}")
 
         threads.append(t)
 
@@ -120,54 +110,53 @@ def _detect_files(path: str):
 
 def _init_managers(ip: str, port: int):
     _DBManager.start()
+
     _NetworkManager.update_info(ip, port)
     _NetworkManager.start()
+
     _SystemManager.start()
-    _RuntimeManager.start()
+    _RegistrationManager.start()
     _EndpointManager.start()
 
 
-def _determine_context(service_files, controller_files):
-    return SERVER_CONTEXT if len(service_files) > 0 else (CLIENT_CONTEXT if len(controller_files) > 0 else None)
+def start(ip: str, port: int = None, *, log_path: Optional[str] = None, log_to_stream: Optional[bool] = False,
+          do_debug: Optional[bool] = False):
+    global game_started
 
-
-def start(ip: str, port: int = None):
-    if _RuntimeManager.started:
-        init_logger.fatal("Game was already running. Cannot start new instance!")
+    if game_started:
+        boot_logger.fatal("Game was already running. Cannot start new instance!")
         raise GameRunningError("Cannot start again, game has already started!")
     else:
-        init_logger.info("Game is not running. Beginning to setup")
+        _setup(log_path, log_to_stream=log_to_stream, do_debug=do_debug)
+        boot_logger.info("Game is not running. Beginning to setup")
 
     importlib.invalidate_caches()
-    init_logger.debug("Invalidated caches")
+    boot_logger.debug("Invalidated caches")
 
-    context = None
     for path in paths:
         component_files, service_files, controller_files = _detect_files(path)
-        init_logger.debug(f"Detected files at path '{path}'")
+        boot_logger.debug(f"Detected files at path '{path}'")
 
-        if context is None:
-            context = _determine_context(service_files, controller_files)
+        if not _ContextManager.context_is_determined():
+            _ContextManager.determine_context(service_files, controller_files)
 
-            if context is not None:
-                init_logger.info(f"No runtime context. Setting as '{context}'")
-                _RuntimeManager.set_context(context)
-
-        init_logger.info("Loading scripts")
+        boot_logger.info(f"Loading scripts at path '{path}'...")
         threads = _load_modules(component_files, service_files, controller_files)
 
         for thread in threads:
             thread.join()
 
-        init_logger.info("Loaded scripts")
+        boot_logger.info(f"Loaded scripts at path '{path}'")
 
-    if context is not None:
-        init_logger.info("Initialising all runtime managers")
+    if _ContextManager.context_is_determined():
+        boot_logger.info("Initialising all runtime managers")
         _init_managers(ip, port)
-        init_logger.info("Initialised all runtime managers")
+        boot_logger.info("Initialised all runtime managers")
+
+        game_started = True
 
     else:
-        init_logger.fatal("No entrypoint found!")
+        boot_logger.fatal("No entrypoint found!")
         raise NoModuleEntrypointException("No modules could be found to run on server or client")
 
 

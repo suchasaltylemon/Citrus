@@ -8,3 +8,11 @@ class LoggingException(Exception):
 
 class NoModuleEntrypointException(Exception):
     pass
+
+
+class LifecycleException(Exception):
+    pass
+
+
+class NetworkError(Exception):
+    pass
