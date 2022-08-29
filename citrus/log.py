@@ -60,3 +60,6 @@ def setup(path: Optional[str] = None, *, log_to_stream: Optional[bool] = False, 
     if do_debug:
         for created_logger in _loggers:
             created_logger.setLevel(logging.DEBUG)
+
+    for _logger in _loggers:
+        _logger.disabled = False
