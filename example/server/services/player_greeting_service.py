@@ -9,8 +9,6 @@ from citrus.lifecycle import onstart
 @onstart()
 class PlayerGreetingService:
     def on_start(self):
-        print("Greet service started")
-
         @PlayerService.PlayerAdded()
         def greet_player(player: Player):
             print(f"{player.display_name} has joined")

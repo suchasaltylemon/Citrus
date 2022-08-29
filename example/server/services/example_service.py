@@ -7,7 +7,7 @@ from citrus.lifecycle import onstart
 @onstart()
 class ExampleService:
     def on_start(self):
-        print("Example service")
+        pass
 
 
 export(ExampleService)
