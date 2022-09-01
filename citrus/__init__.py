@@ -26,6 +26,14 @@ game_started = False
 
 boot_logger = _logger("boot")
 
+context_manager = _ContextManager()
+network_manager = _NetworkManager()
+db_manager = _DBManager()
+system_manager = _SystemManager()
+registration_manager = _RegistrationManager()
+endpoint_manager = _EndpointManager()
+component_manager = _ComponentManager()
+
 
 def add_path(path: str):
     path = path.replace("/", "\\")
@@ -51,7 +59,7 @@ def _load_modules(component_files, service_files, controller_files):
             exported_component = namespace["export"]
             assert _is_component(exported_component)
 
-            _ComponentManager.register_component(exported_component)
+            component_manager.register_component(exported_component)
 
         t = Thread(target=_thread)
         t.start()
@@ -68,7 +76,7 @@ def _load_modules(component_files, service_files, controller_files):
             exported_service = namespace["export"]
             assert hasattr(exported_service, "_instance")
 
-            _RegistrationManager.register_service(exported_service())
+            registration_manager.register_service(exported_service())
 
         t = Thread(target=_thread)
         t.start()
@@ -84,7 +92,7 @@ def _load_modules(component_files, service_files, controller_files):
 
             exported_controller = namespace["export"]
 
-            _RegistrationManager.register_controller(exported_controller())
+            registration_manager.register_controller(exported_controller())
             boot_logger.info(f"Registered controller {exported_controller}")
 
         t = Thread(target=_thread)
@@ -109,14 +117,14 @@ def _detect_files(path: str):
 
 
 def _init_managers(ip: str, port: int):
-    _DBManager.start()
+    db_manager.start()
 
-    _NetworkManager.update_info(ip, port)
-    _NetworkManager.start()
+    network_manager.update_info(ip, port)
+    network_manager.start()
 
-    _SystemManager.start()
-    _RegistrationManager.start()
-    _EndpointManager.start()
+    system_manager.start()
+    registration_manager.start()
+    endpoint_manager.start()
 
 
 def start(ip: str, port: int = None, *, log_path: Optional[str] = None, log_to_stream: Optional[bool] = False,
@@ -137,8 +145,8 @@ def start(ip: str, port: int = None, *, log_path: Optional[str] = None, log_to_s
         component_files, service_files, controller_files = _detect_files(path)
         boot_logger.debug(f"Detected files at path '{path}'")
 
-        if not _ContextManager.context_is_determined():
-            _ContextManager.determine_context(service_files, controller_files)
+        if not context_manager.context_is_determined():
+            context_manager.determine_context(service_files, controller_files)
 
         boot_logger.info(f"Loading scripts at path '{path}'...")
         threads = _load_modules(component_files, service_files, controller_files)
@@ -148,7 +156,7 @@ def start(ip: str, port: int = None, *, log_path: Optional[str] = None, log_to_s
 
         boot_logger.info(f"Loaded scripts at path '{path}'")
 
-    if _ContextManager.context_is_determined():
+    if context_manager.context_is_determined():
         boot_logger.info("Initialising all runtime managers")
         _init_managers(ip, port)
         boot_logger.info("Initialised all runtime managers")

@@ -1,15 +1,18 @@
 from .login_db_manager import LoginDBManager
 from ..context_manager import ContextManager
+from ..singleton import singleton
 from ...include.signalio import LOADER
 
+context_manager = ContextManager()
 
+
+@singleton
 class DBManager:
     login_db_manager: LoginDBManager = None
 
-    @classmethod
-    def start(cls):
-        if not ContextManager.is_server():
+    def start(self):
+        if not context_manager.is_server():
             return
 
-        cls.login_db_manager = LoginDBManager("./db/accounts.db")
-        cls.login_db_manager.start()
+        self.login_db_manager = LoginDBManager("./db/accounts.db")
+        self.login_db_manager.start()

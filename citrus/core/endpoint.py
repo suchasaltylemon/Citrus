@@ -8,6 +8,9 @@ from ..utils.encoding import bstring, sbytes
 
 ENDPOINT_PREFIX = "__endpoint/"
 
+context_manager = ContextManager()
+network_manager = NetworkManager()
+
 
 class _Endpoint:
     def __init__(self, endpoint_name: str):
@@ -16,9 +19,9 @@ class _Endpoint:
 
         self.Signalled = Event()
 
-        @NetworkManager.Signalled(self._path)
+        @network_manager.Signalled(self._path)
         def handle_signal(conn, signal):
-            if ContextManager.is_server():
+            if context_manager.is_server():
                 players = get_system("players").get_players()
 
                 player = next((p for p in players if p.get_component(Networkable).get_connection() == conn), None)
@@ -41,12 +44,12 @@ class _Endpoint:
                 self.Signalled.fire(signal.data)
 
 
-if ContextManager.is_server():
+if context_manager.is_server():
     class Endpoint(_Endpoint):
         def send_to_player(self, player: Player, data: dict):
             player_connection = player.get_component(Networkable).get_connection()
 
-            NetworkManager.send(player_connection, Signal(self._path, data))
+            network_manager.send(player_connection, Signal(self._path, data))
 
 else:
     class Endpoint(_Endpoint):
@@ -59,4 +62,4 @@ else:
                 "session_token": bstring(session_token)
             }
 
-            NetworkManager.send(NetworkManager.client_connection, Signal(self._path, client_data))
+            network_manager.send(network_manager.client_connection, Signal(self._path, client_data))

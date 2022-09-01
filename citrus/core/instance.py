@@ -4,6 +4,8 @@ from uuid import uuid4
 from .component import get_component
 from ..internal.instance_manager import InstanceManager
 
+instance_manager = InstanceManager()
+
 T = typing.TypeVar("T")
 
 
@@ -22,13 +24,13 @@ def instance(props: dict):
         assert hasattr(cls, "_components"), "Class must extend `BaseInstance`"
 
         name = props.get("name", "$instance")
-        InstanceManager.register_instance_class(cls, props)
+        instance_manager.register_instance_class(cls, props)
 
         def init(self):
             self.name = name
             self.uuid = uuid4().hex
 
-            InstanceManager.attach_components(self)
+            instance_manager.attach_components(self)
 
         setattr(cls, "__init__", init)
 

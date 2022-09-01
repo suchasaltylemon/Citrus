@@ -1,12 +1,15 @@
 from .networking.endpoints import load_server_endpoints
 from .networking.endpoints.client import load_client_endpoints
+from .singleton import singleton
 
 
+@singleton
 class EndpointManager:
-    @classmethod
-    def start(cls):
+    def start(self):
         from .context_manager import ContextManager
-        if ContextManager.is_server():
+        context_manager = ContextManager()
+
+        if context_manager.is_server():
             load_server_endpoints()
 
         else:

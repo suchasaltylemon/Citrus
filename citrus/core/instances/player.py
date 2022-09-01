@@ -3,6 +3,8 @@ from ..instance import instance, BaseInstance
 from ...internal.components.networkable import Networkable
 from ...internal.context_manager import ContextManager
 
+context_manager = ContextManager()
+
 
 @component()
 class ClientComponent:
@@ -19,7 +21,7 @@ class _Player(BaseInstance):
     account_id: str = None
 
 
-if ContextManager.is_server():
+if context_manager.is_server():
     @instance({
         "name": "Player"
     })

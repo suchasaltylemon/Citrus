@@ -12,8 +12,10 @@ LoggedIn = Event[Player]()
 
 LOADER = object()
 
+network_manager = NetworkManager()
 
-@NetworkManager.Signalled("__session_token")
+
+@network_manager.Signalled("__session_token")
 def handle_session_token(_, signal):
     encoded_session_token = signal.data.get("session_token", None)
     if encoded_session_token is None:

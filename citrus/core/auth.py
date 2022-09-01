@@ -1,5 +1,5 @@
-from citrus.core.instances.player import Player
-from citrus.internal.networking.endpoints.client.auth import login as _login, LoggedIn as _LoggedIn, signup as _signup
+from .instances.player import Player
+from ..internal.networking.endpoints.client.auth import login as _login, LoggedIn as _LoggedIn, signup as _signup
 
 TIME_OUT = 3
 

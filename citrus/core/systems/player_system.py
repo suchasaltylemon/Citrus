@@ -9,12 +9,14 @@ from ...log import logger
 
 core_system_logger = logger("core_system")
 
+context_manager = ContextManager()
+
 
 class _PlayerService:
     pass
 
 
-if ContextManager.is_server():
+if context_manager.is_server():
     @singleton
     class PlayerService(_PlayerService):
         PlayerAdded = Event[Player]()

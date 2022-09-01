@@ -1,6 +1,7 @@
 from signalio import Event, ConditionalEvent
 from signalio import SecureServer, SecureClient, SecureConnection
 from signalio import Signal
+from ..singleton import singleton
 from ...core.errors import NetworkError
 from ...log import logger
 
@@ -9,6 +10,7 @@ DEFAULT_PORT = 7092
 network_logging = logger("net")
 
 
+@singleton
 class NetworkManager:
     NewConnection = Event()
     Signalled = ConditionalEvent(lambda _, signal: [signal.path], default="*")
@@ -22,35 +24,35 @@ class NetworkManager:
 
     running = False
 
-    @classmethod
-    def update_info(cls, ip, port=None):
-        cls.ip = ip
-        cls.port = port or DEFAULT_PORT
+    def update_info(self, ip, port=None):
+        self.ip = ip
+        self.port = port or DEFAULT_PORT
 
         network_logging.warn(f"No port provided. Using default port {DEFAULT_PORT} instead")
-        network_logging.info(f"Updated server info. Will now listen at {cls.ip}:{cls.port}")
+        network_logging.info(f"Updated server info. Will now listen at {self.ip}:{self.port}")
 
-    @classmethod
-    def start(cls):
+    def start(self):
         from ..context_manager import ContextManager
+        context_manager = ContextManager()
+
         network_logging.info("Starting network manager")
 
-        if ContextManager.is_server():
+        if context_manager.is_server():
             network_logging.info("Configuring server...")
-            cls.server = SecureServer(cls.ip, cls.port)
+            self.server = SecureServer(self.ip, self.port)
             network_logging.info("Configure server")
 
             network_logging.info("Starting server...")
-            cls.server.start()
+            self.server.start()
             network_logging.info("Started server")
 
-            @cls.server.Connected()
+            @self.server.Connected()
             def handle_connection(connection: SecureConnection):
                 network_logging.info(f"Received connection from {connection.ip}:{connection.port}")
 
                 @connection.Signalled()
                 def handle_all(signal):
-                    cls.Signalled.fire(connection, signal)
+                    self.Signalled.fire(connection, signal)
 
                 @connection.Disconnected()
                 def handle_server_disconnect():
@@ -60,29 +62,29 @@ class NetworkManager:
                 if not connection.secure:
                     connection.Secured.wait()
 
-                cls.NewConnection.fire(connection)
+                self.NewConnection.fire(connection)
 
-        elif ContextManager.is_client():
+        elif context_manager.is_client():
             network_logging.info("Configuring client...")
-            cls.client = SecureClient(cls.ip, cls.port)
+            self.client = SecureClient(self.ip, self.port)
             network_logging.info("Configured client")
 
-            @cls.client.Connected()
+            @self.client.Connected()
             def handle_connection(conn: SecureConnection):
                 network_logging.info(f"Client has connected to server. Client socket running at {conn.ip}:{conn.port}")
-                cls.client_connection = conn
+                self.client_connection = conn
 
                 @conn.Signalled()
                 def handle_signal(signal):
-                    cls.Signalled.fire(cls.client_connection, signal)
+                    self.Signalled.fire(self.client_connection, signal)
 
-            @cls.client.Disconnected()
+            @self.client.Disconnected()
             def handle_client_disconnect():
                 network_logging.info("Client has disconnected from server")
 
             try:
-                network_logging.info(f"Connecting client to server {cls.ip}:{cls.port}")
-                cls.client.connect()
+                network_logging.info(f"Connecting client to server {self.ip}:{self.port}")
+                self.client.connect()
 
             except ConnectionRefusedError as e:
                 network_logging.error("Client connection was refused! Maybe the server is not running", exc_info=e)
@@ -94,8 +96,7 @@ class NetworkManager:
 
             raise e
 
-        cls.running = True
+        self.running = True
 
-    @classmethod
-    def send(cls, conn: SecureConnection, data: Signal):
+    def send(self, conn: SecureConnection, data: Signal):
         conn.send(data)

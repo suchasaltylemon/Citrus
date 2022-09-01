@@ -23,7 +23,6 @@ def encrypt(password: bytes, salt: bytes):
     return scrypt(password, salt, KEY_LENGTH, MEMORY_COST, BLOCK_SIZE, PARALLELISATION)
 
 
-# TODO: Fix DB not storing
 class LoginDBManager:
     def __init__(self, path):
         self.path = path

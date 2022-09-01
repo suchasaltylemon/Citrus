@@ -1,7 +1,8 @@
+from .singleton import singleton
 from ..core.systems import init_systems
 
 
+@singleton
 class SystemManager:
-    @classmethod
-    def start(cls):
+    def start(self):
         init_systems()
