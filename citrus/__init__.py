@@ -2,6 +2,7 @@ import glob
 import importlib
 import inspect
 import os.path
+
 from threading import Thread
 from typing import List, Optional
 
@@ -14,7 +15,10 @@ from .internal.endpoint_manager import EndpointManager as _EndpointManager
 from .internal.networking.network_manager import NetworkManager as _NetworkManager
 from .internal.registration_manager import RegistrationManager as _RegistrationManager
 from .internal.system_manager import SystemManager as _SystemManager
+from .internal.pygame_manager import PygameManager as _PygameManager
 from .log import setup as _setup, logger as _logger
+
+os.environ["PYGAME_HIDE_SUPPORT_PROMPT"] = "hide"
 
 paths = []
 
@@ -33,6 +37,7 @@ system_manager = _SystemManager()
 registration_manager = _RegistrationManager()
 endpoint_manager = _EndpointManager()
 component_manager = _ComponentManager()
+pygame_manager = _PygameManager()
 
 
 def add_path(path: str):
@@ -125,6 +130,9 @@ def _init_managers(ip: str, port: int):
     system_manager.start()
     registration_manager.start()
     endpoint_manager.start()
+
+    if context_manager.is_client():
+        pygame_manager.start()
 
 
 def start(ip: str, port: int = None, *, log_path: Optional[str] = None, log_to_stream: Optional[bool] = False,

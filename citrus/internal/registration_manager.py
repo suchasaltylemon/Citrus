@@ -1,6 +1,7 @@
 from .context_manager import ContextManager
 from .singleton import singleton
 from ..core.errors import LifecycleException
+from ..core.lifecycle_subscriber import get_load_order
 from ..lifecycle import ON_START, ON_START_REGISTERED
 from ..log import logger
 
@@ -37,6 +38,9 @@ class RegistrationManager:
         registration_logger.info(f"Registered controller '{controller_object}'")
 
     def start(self):
+        self.services.sort(key=lambda s: get_load_order(s))
+        self.controllers.sort(key=lambda c: get_load_order(c))
+
         for service in self.services:
             if hasattr(service, ON_START_REGISTERED):
                 if not hasattr(service, ON_START):
